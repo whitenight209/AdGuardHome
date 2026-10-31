@@ -9,6 +9,9 @@ HTTPS with a valid certificate, or use localhost for development.
   browser menu's app installation option.
 - iOS Safari: choose **Share → Add to Home Screen**.
 
+The home-screen label uses the short name **AdGuard** to fit mobile launchers.
+The full app name remains **AdGuard Home**.
+
 The installed app uses the existing AdGuard Home login, including SSO when
 configured. It requires a connection to the server; installation does not
 enable offline DNS administration or cache query logs and configuration.

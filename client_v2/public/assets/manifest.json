@@ -1,7 +1,7 @@
 {
   "id": "../",
   "name": "AdGuard Home",
-  "short_name": "AdGuard Home",
+  "short_name": "AdGuard",
   "start_url": "../",
   "scope": "../",
   "display": "standalone",

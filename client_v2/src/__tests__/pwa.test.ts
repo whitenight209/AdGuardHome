@@ -14,6 +14,9 @@ describe('PWA installation', () => {
 
             expect(html).toContain(`<link rel="manifest" href="${manifestPath}" />`);
             expect(html).toContain('name="apple-mobile-web-app-capable" content="yes"');
+            expect(html).toContain(
+                `name="apple-mobile-web-app-title" content="${manifest.short_name}"`,
+            );
             expect(html).toContain(`name="theme-color" content="${manifest.theme_color}"`);
         },
     );
@@ -34,7 +37,9 @@ describe('PWA installation', () => {
     );
 
     it.each([192, 512])('provides a valid %i pixel PNG install icon', (size) => {
-        const icon = manifest.icons.find((entry: { sizes: string }) => entry.sizes === `${size}x${size}`);
+        const icon = manifest.icons.find(
+            (entry: { sizes: string }) => entry.sizes === `${size}x${size}`,
+        );
 
         expect(icon).toBeDefined();
         expect(icon.type).toBe('image/png');

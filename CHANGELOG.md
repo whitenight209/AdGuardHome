@@ -18,6 +18,10 @@ See also the [v0.107.80 GitHub milestone][ms-v0.107.80].
 NOTE: Add new changes BELOW THIS COMMENT.
 -->
 
+### Changed
+
+- Shortened the PWA home-screen label to AdGuard to fit mobile launchers.
+
 ### Added
 
 - Optional remembered SSO devices with a default 180-day lifetime (up to one
