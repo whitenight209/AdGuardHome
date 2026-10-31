@@ -96,6 +96,7 @@ client_v2/
 │   ├── store/types.ts             # Legacy type re-exports (post-Redux)
 │   ├── stores/                    # SolidJS createStore modules — one per domain
 │   ├── types/                     # css-modules.d.ts ambient declarations
+│   ├── features/sso/             # Isolated optional SSO login component
 │   ├── login/                     # Standalone login entry
 │   ├── install/                   # Standalone install-wizard entry
 │   ├── forgot_password/           # Standalone password-reset entry

@@ -416,6 +416,8 @@ func (web *webAPI) wrapMux(l *slog.Logger) (h http.Handler) {
 
 	// TODO(d.kolyshev):  Remove after DoH is served on a separate address.
 	h = web.wrapDoHRoutes(h)
+	h = redactSSORequestURI(h)
+	h = web.wrapSSORedirects(h)
 
 	return h
 }

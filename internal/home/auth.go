@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghuser"
+	"github.com/AdguardTeam/AdGuardHome/internal/sso"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/netutil"
@@ -50,6 +51,7 @@ func (wu *webUser) toUser() (u *aghuser.User) {
 
 // authConfig is the configuration structure for [auth].
 type authConfig struct {
+	sso sso.Config
 	// baseLogger is used for creating other loggers.  It must not be nil.
 	baseLogger *slog.Logger
 
@@ -80,6 +82,7 @@ type authConfig struct {
 
 // auth stores web user information and handles authentication.
 type auth struct {
+	sso *sso.Service
 	// logger is used to log the operation of the auth module.
 	logger *slog.Logger
 
@@ -128,7 +131,7 @@ func newAuth(ctx context.Context, conf *authConfig) (a *auth, err error) {
 		return nil, fmt.Errorf("creating session storage: %w", err)
 	}
 
-	return &auth{
+	a = &auth{
 		logger:          conf.baseLogger.With(slogutil.KeyPrefix, "auth"),
 		rateLimiter:     conf.rateLimiter,
 		trustedProxies:  conf.trustedProxies,
@@ -137,7 +140,12 @@ func newAuth(ctx context.Context, conf *authConfig) (a *auth, err error) {
 		users:           userDB,
 		isGLiNet:        conf.isGLiNet,
 		isUserless:      len(conf.users) == 0,
-	}, nil
+	}
+	if err = a.initSSO(ctx, conf); err != nil {
+		_ = s.Close()
+		return nil, err
+	}
+	return a, nil
 }
 
 // middleware returns authentication middleware.
@@ -153,11 +161,12 @@ func (a *auth) middleware() (mw httputil.Middleware) {
 	}
 
 	return newAuthMiddlewareDefault(&authMiddlewareDefaultConfig{
-		logger:         a.logger,
-		rateLimiter:    a.rateLimiter,
-		trustedProxies: a.trustedProxies,
-		sessions:       a.sessions,
-		users:          a.users,
+		requireAuthentication: a.sso.Enabled(),
+		logger:                a.logger,
+		rateLimiter:           a.rateLimiter,
+		trustedProxies:        a.trustedProxies,
+		sessions:              a.sessions,
+		users:                 a.users,
 	})
 }
 

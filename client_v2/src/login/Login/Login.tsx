@@ -1,3 +1,4 @@
+import { SsoLogin } from 'panel/features/sso/SsoLogin';
 import intl from 'panel/common/intl';
 
 import { AuthLayout } from 'panel/common/ui/AuthLayout';
@@ -11,7 +12,9 @@ export const Login = () => {
 
     return (
         <AuthLayout title={intl.getMessage('login')}>
-            <Form onSubmit={handleSubmit} />
+            <SsoLogin>
+                <Form onSubmit={handleSubmit} />
+            </SsoLogin>
         </AuthLayout>
     );
 };

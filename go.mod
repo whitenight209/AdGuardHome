@@ -10,8 +10,10 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/bluele/gcache v0.0.2
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
+	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/digineo/go-ipset/v2 v2.2.1
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/go-jose/go-jose/v4 v4.1.4
 	// TODO(e.burkov): This package is deprecated; find a new one or use our
 	// own code for that.  Perhaps, use gopacket.
 	github.com/go-ping/ping v1.2.0
@@ -39,6 +41,7 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.61.0
+	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sys v0.49.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	howett.net/plist v1.0.1

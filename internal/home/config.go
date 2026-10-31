@@ -22,6 +22,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering"
 	"github.com/AdguardTeam/AdGuardHome/internal/filtering/rulelist"
 	"github.com/AdguardTeam/AdGuardHome/internal/schedule"
+	"github.com/AdguardTeam/AdGuardHome/internal/sso"
 	"github.com/AdguardTeam/dnsproxy/proxy"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
@@ -82,6 +83,8 @@ type clientSourcesConfig struct {
 //
 // TODO(d.kolyshev):  Use [configmgr.Config].
 type configuration struct {
+	// SSO is the isolated, optional web sign-on configuration.
+	SSO sso.Config `yaml:"sso,omitempty"`
 	// Raw file data to avoid re-reading of configuration file
 	// It's reset after config is parsed
 	fileData []byte
@@ -563,6 +566,9 @@ func hasNilValue(m map[string]any) (ok bool) {
 // validateConfig returns error if the configuration is invalid.  l must not be
 // nil.
 func validateConfig(ctx context.Context, l *slog.Logger, fileData []byte) (err error) {
+	if err = config.SSO.Validate(); err != nil {
+		return err
+	}
 	err = validateBindHosts(ctx, l, config, fileData)
 	if err != nil {
 		// Don't wrap the error since it's informative enough as is.

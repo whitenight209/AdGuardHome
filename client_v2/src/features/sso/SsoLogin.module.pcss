@@ -1,0 +1,41 @@
+.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-sizing: border-box;
+    width: calc(100% - 32px);
+    margin: 24px 16px 40px;
+    min-height: 48px;
+    padding: 12px 20px;
+    border: 1px solid var(--default-secondary-button-stroke);
+    border-radius: 8px;
+    background: var(--default-secondary-button);
+    color: var(--default-main-text);
+    font-size: 16px;
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    text-align: center;
+    transition: background-color var(--t2);
+
+    & svg {
+        flex-shrink: 0;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--default-main-button);
+        outline-offset: 3px;
+    }
+
+    &:active {
+        background: var(--pressed-secondary-button);
+    }
+}
+
+@media (hover: hover) {
+    .button:hover {
+        color: var(--default-main-text);
+        background: var(--hovered-secondary-button);
+        text-decoration: none;
+    }
+}

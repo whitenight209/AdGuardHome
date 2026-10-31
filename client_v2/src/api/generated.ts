@@ -2,6 +2,7 @@ import type {
     AccessList,
     AddUrlRequest,
     AddressesInfo,
+    AuthConfig,
     BlockedServicesAll,
     BlockedServicesArray,
     BlockedServicesSchedule,
@@ -14,6 +15,7 @@ import type {
     ClientsFindParams,
     ClientsFindResponse,
     ClientsSearchRequest,
+    CompleteSSOParams,
     DHCPNetInterfaces,
     DNSConfig,
     DhcpConfig,
@@ -1391,6 +1393,63 @@ export const installConfigure = async (
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...options?.headers },
         body: JSON.stringify(initialConfiguration),
+    });
+};
+
+export const getGetAuthConfigUrl = () => {
+    return `control/auth/config`;
+};
+
+/**
+ * @summary Get public web login options
+ */
+export const getAuthConfig = async (options?: RequestInit): Promise<AuthConfig> => {
+    return customFetch<AuthConfig>(getGetAuthConfigUrl(), {
+        ...options,
+        method: 'GET',
+    });
+};
+
+export const getStartSSOUrl = () => {
+    return `control/sso/oidc/start`;
+};
+
+/**
+ * @summary Begin OIDC sign-in using top-level browser navigation
+ */
+export const startSSO = async (options?: RequestInit): Promise<unknown> => {
+    return customFetch<unknown>(getStartSSOUrl(), {
+        ...options,
+        method: 'GET',
+    });
+};
+
+export const getCompleteSSOUrl = (params: CompleteSSOParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? 'null' : String(value));
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `control/sso/oidc/callback?${stringifiedParams}`
+        : `control/sso/oidc/callback`;
+};
+
+/**
+ * @summary Consume the browser-bound OIDC authorization response
+ */
+export const completeSSO = async (
+    params: CompleteSSOParams,
+    options?: RequestInit,
+): Promise<unknown> => {
+    return customFetch<unknown>(getCompleteSSOUrl(params), {
+        ...options,
+        method: 'GET',
     });
 };
 

@@ -1321,6 +1321,54 @@
             The specified password does not meet the strength requirements.
         '500':
           'description': 'Cannot start the DNS server'
+  '/auth/config':
+    'get':
+      'tags': ['global']
+      'operationId': 'getAuthConfig'
+      'summary': 'Get public web login options'
+      'security': []
+      'responses':
+        '200':
+          'description': 'Login options without credentials or identity mappings.'
+          'content':
+            'application/json':
+              'schema':
+                '$ref': '#/components/schemas/AuthConfig'
+  '/sso/oidc/start':
+    'get':
+      'tags': ['global']
+      'operationId': 'startSSO'
+      'summary': 'Begin OIDC sign-in using top-level browser navigation'
+      'security': []
+      'responses':
+        '302':
+          'description': 'Redirect to provider or sanitized login error.'
+        '404':
+          'description': 'SSO is disabled.'
+        '429':
+          'description': 'Too many pending sign-in attempts.'
+  '/sso/oidc/callback':
+    'get':
+      'tags': ['global']
+      'operationId': 'completeSSO'
+      'summary': 'Consume the browser-bound OIDC authorization response'
+      'security': []
+      'parameters':
+        - 'name': 'state'
+          'in': 'query'
+          'required': true
+          'schema': {'type': 'string'}
+        - 'name': 'code'
+          'in': 'query'
+          'schema': {'type': 'string'}
+        - 'name': 'error'
+          'in': 'query'
+          'schema': {'type': 'string'}
+      'responses':
+        '302':
+          'description': 'Set application session and redirect, or sanitized error.'
+        '404':
+          'description': 'SSO is disabled.'
   '/login':
     'post':
       'tags':
@@ -3316,6 +3364,14 @@
           'description': 'Basic auth username'
           'example': 'admin'
           'type': 'string'
+    'AuthConfig':
+      'type': 'object'
+      'required': ['local_login_enabled', 'sso_enabled']
+      'properties':
+        'local_login_enabled': {'type': 'boolean'}
+        'sso_enabled': {'type': 'boolean'}
+        'sso_display_name': {'type': 'string'}
+        'sso_start_url': {'type': 'string'}
     'Login':
       'type': 'object'
       'description': 'Login request data'

@@ -1149,6 +1149,7 @@ func initUsers(
 
 	dataDirPath := filepath.Join(workDir, dataDir)
 	auth, err = newAuth(ctx, &authConfig{
+		sso:             config.SSO,
 		baseLogger:      baseLogger,
 		rateLimiter:     rateLimiter,
 		trustedProxies:  netutil.SliceSubnetSet(netutil.UnembedPrefixes(config.DNS.TrustedProxies)),

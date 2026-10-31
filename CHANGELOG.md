@@ -18,6 +18,17 @@ See also the [v0.107.80 GitHub milestone][ms-v0.107.80].
 NOTE: Add new changes BELOW THIS COMMENT.
 -->
 
+### Added
+
+- SSO login presentation with a themed Google button and icon; local login
+  controls are hidden while SSO is enabled.
+
+
+- Optional OIDC web UI sign-in in this fork, with explicit local-user mappings,
+  isolated SSO sessions, and local password recovery. See
+  [the setup guide](doc/web-ui-sso-setup.md).
+- A fork-specific GitHub Actions workflow for Raspberry Pi ARM64 and ARMv7 builds.
+
 ### Security
 
 - Go version has been updated to prevent the possibility of exploiting the Go vulnerabilities fixed in [1.27.2][go-1.27.2].

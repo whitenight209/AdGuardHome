@@ -1,4 +1,7 @@
 {
+  "sso_loading": "Loading sign-in options…",
+  "sso_error": "SSO sign-in is unavailable or did not complete. Please try again.",
+  "sso_sign_in": "Sign in with %provider%",
   "add": "Add",
   "add_allowlist": "Add allowlist",
   "add_blocklist": "Add blocklist",

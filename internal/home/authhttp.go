@@ -16,6 +16,7 @@ import (
 
 	"github.com/AdguardTeam/AdGuardHome/internal/aghhttp"
 	"github.com/AdguardTeam/AdGuardHome/internal/aghuser"
+	"github.com/AdguardTeam/AdGuardHome/internal/sso"
 	"github.com/AdguardTeam/golibs/errors"
 	"github.com/AdguardTeam/golibs/httphdr"
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
@@ -233,9 +234,10 @@ func newCookie(
 	}
 
 	return &http.Cookie{
+		Secure:   auth.sso.Enabled(),
 		Name:     sessionCookieName,
 		Value:    hex.EncodeToString(sess.Token[:]),
-		Path:     "/",
+		Path:     auth.sso.BasePath(),
 		Expires:  time.Now().Add(cookieTTL),
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
@@ -251,7 +253,7 @@ func (web *webAPI) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// The only error that is returned from r.Cookie is [http.ErrNoCookie].
 		// The user is already logged out.
-		respHdr.Set(httphdr.Location, "/login.html")
+		respHdr.Set(httphdr.Location, web.auth.sso.ExternalPath("/login.html"))
 		w.WriteHeader(http.StatusFound)
 
 		return
@@ -272,22 +274,24 @@ func (web *webAPI) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c = &http.Cookie{
+		Secure:  web.auth.sso.Enabled(),
 		Name:    sessionCookieName,
 		Value:   "",
-		Path:    "/",
+		Path:    web.auth.sso.BasePath(),
 		Expires: time.Unix(0, 0),
 
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
 
-	respHdr.Set(httphdr.Location, "/login.html")
+	respHdr.Set(httphdr.Location, web.auth.sso.ExternalPath("/login.html"))
 	respHdr.Set(httphdr.SetCookie, c.String())
 	w.WriteHeader(http.StatusFound)
 }
 
 // registerAuthHandlers registers authentication handlers.
 func (web *webAPI) registerAuthHandlers() {
+	web.registerSSOHandlers()
 	web.conf.mux.Handle(
 		http.MethodPost+" "+"/control/login",
 		web.postInstallHandler(http.HandlerFunc(web.handleLogin)),
@@ -326,7 +330,7 @@ func isPublicResource(p string) (ok bool) {
 		"/install.html",
 	}
 
-	return isAsset || isLogin || isForgotPassword || slices.Contains(paths, p)
+	return isAsset || isLogin || isForgotPassword || slices.Contains(paths, p) || sso.PublicPath(p)
 }
 
 const (
@@ -337,6 +341,7 @@ const (
 // authMiddlewareDefaultConfig is the configuration structure for the default
 // authentication middleware.
 type authMiddlewareDefaultConfig struct {
+	requireAuthentication bool
 	// logger is used for logging the operation of the middleware.  It must not
 	// be nil.
 	//
@@ -363,22 +368,24 @@ type authMiddlewareDefaultConfig struct {
 // for a web client using an authentication cookie or basic auth credentials and
 // passes it with the context.
 type authMiddlewareDefault struct {
-	logger         *slog.Logger
-	rateLimiter    loginRateLimiter
-	trustedProxies netutil.SubnetSet
-	sessions       aghuser.SessionStorage
-	users          aghuser.DB
+	requireAuthentication bool
+	logger                *slog.Logger
+	rateLimiter           loginRateLimiter
+	trustedProxies        netutil.SubnetSet
+	sessions              aghuser.SessionStorage
+	users                 aghuser.DB
 }
 
 // newAuthMiddlewareDefault returns the new properly initialized
 // *authMiddlewareDefault.
 func newAuthMiddlewareDefault(c *authMiddlewareDefaultConfig) (mw *authMiddlewareDefault) {
 	return &authMiddlewareDefault{
-		logger:         c.logger,
-		rateLimiter:    c.rateLimiter,
-		trustedProxies: c.trustedProxies,
-		sessions:       c.sessions,
-		users:          c.users,
+		requireAuthentication: c.requireAuthentication,
+		logger:                c.logger,
+		rateLimiter:           c.rateLimiter,
+		trustedProxies:        c.trustedProxies,
+		sessions:              c.sessions,
+		users:                 c.users,
 	}
 }
 
@@ -473,7 +480,7 @@ func (mw *authMiddlewareDefault) needsAuthentication(ctx context.Context) (ok bo
 		panic(err)
 	}
 
-	return len(users) != 0
+	return mw.requireAuthentication || len(users) != 0
 }
 
 // userFromRequest tries to retrieve a user based on the request.  r must not be

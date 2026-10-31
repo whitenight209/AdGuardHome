@@ -1,0 +1,104 @@
+name: Homelab ARM build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'client_v2/**'
+      - 'openapi/**'
+      - '.github/workflows/homelab-arm.yaml'
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client_v2/package-lock.json
+      - run: npm ci
+        working-directory: client_v2
+      - run: npm run check
+        working-directory: client_v2
+      - run: npm run build-prod
+        working-directory: client_v2
+      - uses: actions/upload-artifact@v7
+        with:
+          name: homelab-frontend
+          path: build/static
+          if-no-files-found: error
+
+  backend-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - run: go test -race ./internal/sso/... ./internal/home ./internal/aghuser
+      - run: go vet ./internal/sso/... ./internal/home
+
+  arm:
+    needs: [frontend, backend-test]
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            goarm: ''
+            target: linux-arm64
+          - arch: arm
+            goarm: '7'
+            target: linux-armv7
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@v8
+        with:
+          name: homelab-frontend
+          path: build/static
+      - name: Cross-compile Raspberry Pi binary
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
+          GOARM: ${{ matrix.goarm }}
+          CHANNEL: development
+          VERSION: v0.0.0-homelab
+          OUT: dist/${{ matrix.target }}/AdGuardHome
+        run: |
+          mkdir -p "$(dirname "$OUT")"
+          sh scripts/make/go-build.sh
+          file "$OUT"
+      - name: Package binary and checksum
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          cp LICENSE.txt dist/"$TARGET"/
+          tar -czf "dist/AdGuardHome-$TARGET.tar.gz" -C "dist/$TARGET" .
+          cd dist
+          sha256sum "AdGuardHome-$TARGET.tar.gz" > "AdGuardHome-$TARGET.tar.gz.sha256"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: AdGuardHome-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+          if-no-files-found: error
