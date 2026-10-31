@@ -1,9 +1,12 @@
-import { cleanup, render, screen, waitFor } from '@solidjs/testing-library';
+import { cleanup, fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAuthConfig } from 'panel/api/generated';
+import { getAuthConfig, refreshSSO } from 'panel/api/generated';
 import { SsoLogin } from 'panel/features/sso/SsoLogin';
 
-vi.mock('panel/api/generated', () => ({ getAuthConfig: vi.fn() }));
+vi.mock('panel/api/generated', () => ({
+    getAuthConfig: vi.fn(),
+    refreshSSO: vi.fn().mockRejectedValue(new Error('no device')),
+}));
 vi.mock('panel/common/intl', () => ({
     default: {
         getMessage: (key: string, values?: { provider: string }) =>
@@ -13,6 +16,7 @@ vi.mock('panel/common/intl', () => ({
 
 beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(refreshSSO).mockRejectedValue(new Error('no remembered device'));
     window.history.replaceState({}, '', '/login.html');
 });
 afterEach(cleanup);
@@ -37,6 +41,48 @@ describe('SSO login', () => {
         expect(window.location.pathname).toBe('/login.html');
         expect(screen.queryByRole('textbox')).toBeNull();
         expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('opts into remembered login only when the checkbox is checked', async () => {
+        vi.mocked(getAuthConfig).mockResolvedValue({
+            local_login_enabled: true,
+            sso_enabled: true,
+            sso_display_name: 'Google',
+            sso_start_url: '/control/sso/oidc/start',
+        });
+        render(() => <SsoLogin />);
+        const choice = await screen.findByRole('checkbox', { name: 'sso_remember_device' });
+        const link = screen.getByRole('link', { name: 'sso_sign_in Google' });
+        expect(choice).not.toBeChecked();
+        expect(link).toHaveAttribute('href', '/control/sso/oidc/start');
+        fireEvent.click(choice);
+        expect(link).toHaveAttribute('href', '/control/sso/oidc/start?remember=1');
+        fireEvent.click(choice);
+        expect(link).toHaveAttribute('href', '/control/sso/oidc/start');
+    });
+
+    it('restores a remembered session before asking the user to sign in again', async () => {
+        const original = Object.getOwnPropertyDescriptor(window, 'location')!;
+        const replace = vi.fn();
+        Object.defineProperty(window, 'location', {
+            configurable: true,
+            value: { href: 'https://dns.example.com/adguard/login.html', search: '', replace },
+        });
+        try {
+            vi.mocked(getAuthConfig).mockResolvedValue({
+                local_login_enabled: true,
+                sso_enabled: true,
+                sso_display_name: 'Google',
+                sso_start_url: '/adguard/control/sso/oidc/start',
+            });
+            vi.mocked(refreshSSO).mockResolvedValue(undefined);
+            render(() => <SsoLogin />);
+            await waitFor(() =>
+                expect(replace).toHaveBeenCalledWith('https://dns.example.com/adguard/'),
+            );
+        } finally {
+            Object.defineProperty(window, 'location', original);
+        }
     });
 
     it('keeps the provider link within the current proxy prefix', async () => {

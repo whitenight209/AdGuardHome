@@ -31,11 +31,20 @@ an unexpired session. Clearing site data or using a separate browser profile
 requires another login. Browser and installed-app cookie sharing depends on
 the platform; verify the installed app on the device you use.
 
-SSO sessions have a fixed lifetime: eight hours by default, configurable up
-to 24 hours with `sso.oidc.session_ttl`. Opening the app or using it does not
-extend that deadline. This differs from the local password login policy.
-Google's own login session is separate; an active Google session does not
-extend an AdGuard Home session.
+Selecting **Keep me signed in on this device** enables a remembered device
+for 180 days by default, configurable up to 365 days with
+`sso.oidc.remember_ttl`. A 15-minute session is renewed automatically using a
+rotating HttpOnly cookie. The absolute remembered-device deadline does not
+move forward when you use the app. Without this option, the existing
+8-hour SSO session policy remains in effect. Google's own session is
+separate and does not extend the AdGuard Home deadline.
+
+Use **General settings → Remembered devices** to sign out individual devices.
+Reusing an old refresh token revokes that device's entire session family.
+The app restores remembered login after reopening and retries expired API
+requests once after renewal. Temporary renewal outages preserve the long
+cookie and do not force sign-out. See the [SSO setup guide](web-ui-sso-setup.md)
+for configuration and the module boundaries used for upstream sync.
 
 When the app becomes visible again, it checks the server status. An expired
 session returns to login promptly; temporary connectivity failures retain

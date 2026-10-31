@@ -27,6 +27,7 @@ type OIDCConfig struct {
 	ClientSecretFile string    `yaml:"client_secret_file"`
 	PublicURL        string    `yaml:"public_url"`
 	SessionTTL       string    `yaml:"session_ttl"`
+	RememberTTL      string    `yaml:"remember_ttl"`
 	Mappings         []Mapping `yaml:"mappings"`
 }
 
@@ -70,7 +71,10 @@ func (c Config) Validate() error {
 	if err = validateMappings(c.OIDC.Mappings); err != nil {
 		return err
 	}
-	_, err = c.TTL()
+	if _, err = c.TTL(); err != nil {
+		return err
+	}
+	_, err = c.RememberDuration()
 	return err
 }
 
@@ -103,11 +107,12 @@ func (c Config) fingerprint() string {
 	mappings := append([]Mapping(nil), c.OIDC.Mappings...)
 	slices.SortFunc(mappings, func(a, b Mapping) int { return cmp.Compare(a.Subject, b.Subject) })
 	ttl, _ := c.TTL()
+	remember, _ := c.RememberDuration()
 	data, _ := json.Marshal(struct {
 		Issuer, ClientID, PublicURL string
-		TTL                         time.Duration
+		TTL, Remember               time.Duration
 		Mappings                    []Mapping
-	}{c.OIDC.Issuer, c.OIDC.ClientID, c.OIDC.PublicURL, ttl, mappings})
+	}{c.OIDC.Issuer, c.OIDC.ClientID, c.OIDC.PublicURL, ttl, remember, mappings})
 	h := sha256.Sum256(data)
 	return hex.EncodeToString(h[:])
 }

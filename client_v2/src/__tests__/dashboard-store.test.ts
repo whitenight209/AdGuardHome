@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+vi.mock('panel/api/sessionRenewal', () => ({ renewSession: vi.fn().mockResolvedValue(false) }));
+
 const mocks = vi.hoisted(() => ({
     tlsStatus: vi.fn(),
     getVersionJson: vi.fn(),
@@ -58,19 +60,26 @@ describe('session validation when returning to the app', () => {
         Object.defineProperty(window, 'location', originalLocation);
     });
 
-    it.each([401, 403])('immediately reloads after HTTP %i instead of retrying for a minute', async (status) => {
-        const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status }));
+    it.each([401, 403])(
+        'immediately reloads after HTTP %i instead of retrying for a minute',
+        async (status) => {
+            const fetch = vi
+                .spyOn(globalThis, 'fetch')
+                .mockResolvedValue(new Response('', { status }));
 
-        await getTimerStatus();
-        await vi.advanceTimersByTimeAsync(0);
+            await getTimerStatus();
+            await vi.advanceTimersByTimeAsync(0);
 
-        expect(reload).toHaveBeenCalledOnce();
-        expect(fetch).toHaveBeenCalledOnce();
-        expect(vi.getTimerCount()).toBe(0);
-    });
+            expect(reload).toHaveBeenCalledOnce();
+            expect(fetch).toHaveBeenCalledOnce();
+            expect(vi.getTimerCount()).toBe(0);
+        },
+    );
 
     it('continues retrying a temporary server outage without logging out', async () => {
-        const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 503 }));
+        const fetch = vi
+            .spyOn(globalThis, 'fetch')
+            .mockResolvedValue(new Response('', { status: 503 }));
 
         await getTimerStatus();
         await vi.advanceTimersByTimeAsync(1000);

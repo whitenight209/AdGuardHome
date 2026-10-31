@@ -931,5 +931,12 @@
   "yes_disable": "예, 비활성화",
   "yes_disallow": "예, 허용 안 함",
   "yes_remove": "예, 삭제",
-  "yes_reset": "예, 제거"
+  "yes_reset": "예, 제거",
+  "sso_remember_device": "이 기기에서 로그인 유지",
+  "sso_devices": "로그인을 유지한 기기",
+  "sso_devices_current": "현재 기기",
+  "sso_devices_revoke": "기기 로그아웃",
+  "sso_devices_error": "로그인을 유지한 기기를 조회하거나 변경하지 못했습니다.",
+  "sso_devices_expiry": "%date%까지 로그인 유지",
+  "sso_devices_refresh": "기기 목록 새로고침"
 }

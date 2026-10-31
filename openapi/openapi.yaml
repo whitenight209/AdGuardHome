@@ -1334,12 +1334,69 @@
             'application/json':
               'schema':
                 '$ref': '#/components/schemas/AuthConfig'
+  '/sso/refresh':
+    'post':
+      'tags': ['global']
+      'operationId': 'refreshSSO'
+      'summary': 'Rotate a remembered-device cookie and issue a short session'
+      'security': []
+      'responses':
+        '204':
+          'description': 'Session renewed; the absolute device deadline is unchanged.'
+        '401':
+          'description': 'Device token missing, expired, revoked or replayed.'
+        '403':
+          'description': 'Origin does not match the configured public URL.'
+        '404':
+          'description': 'SSO is disabled.'
+  '/sso/devices':
+    'get':
+      'tags': ['global']
+      'operationId': 'getSSODevices'
+      'summary': 'List remembered devices owned by the signed-in SSO user'
+      'responses':
+        '200':
+          'description': 'Devices without credentials.'
+          'content':
+            'application/json':
+              'schema':
+                'type': 'array'
+                'items':
+                  '$ref': '#/components/schemas/SSODevice'
+        '401':
+          'description': 'A valid SSO access session is required.'
+  '/sso/devices/revoke':
+    'post':
+      'tags': ['global']
+      'operationId': 'revokeSSODevice'
+      'summary': 'Revoke one remembered device owned by the SSO user'
+      'requestBody':
+        'required': true
+        'content':
+          'application/json':
+            'schema':
+              'type': 'object'
+              'required': ['id']
+              'properties':
+                'id': {'type': 'string'}
+      'responses':
+        '204':
+          'description': 'The selected device has been revoked.'
+        '401':
+          'description': 'A valid SSO access session is required.'
+        '403':
+          'description': 'Invalid origin or device owner.'
   '/sso/oidc/start':
     'get':
       'tags': ['global']
       'operationId': 'startSSO'
       'summary': 'Begin OIDC sign-in using top-level browser navigation'
       'security': []
+      'parameters':
+        - 'name': 'remember'
+          'in': 'query'
+          'schema': {'type': 'string', 'enum': ['1']}
+          'description': 'Opt into a remembered device for this login.'
       'responses':
         '302':
           'description': 'Redirect to provider or sanitized login error.'
@@ -1532,6 +1589,17 @@
             '$ref': '#/components/schemas/RewriteUpdate'
       'required': true
   'schemas':
+    'SSODevice':
+      'type': 'object'
+      'required': ['id', 'user_agent', 'created', 'last_used', 'expires', 'current']
+      'properties':
+        'id': {'type': 'string'}
+        'user_agent': {'type': 'string'}
+        'created': {'type': 'string', 'format': 'date-time'}
+        'last_used': {'type': 'string', 'format': 'date-time'}
+        'expires': {'type': 'string', 'format': 'date-time'}
+        'current': {'type': 'boolean'}
+
     'FilteringReason':
       'type': 'string'
       'description': 'Request filtering status.'

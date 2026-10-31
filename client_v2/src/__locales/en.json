@@ -934,5 +934,12 @@
   "yes_disable": "Yes, disable",
   "yes_disallow": "Yes, disallow",
   "yes_remove": "Yes, remove",
-  "yes_reset": "Yes, reset"
+  "yes_reset": "Yes, reset",
+  "sso_remember_device": "Keep me signed in on this device",
+  "sso_devices": "Remembered devices",
+  "sso_devices_current": "This device",
+  "sso_devices_revoke": "Sign out device",
+  "sso_devices_error": "Could not load or update remembered devices.",
+  "sso_devices_expiry": "Signed in until %date%",
+  "sso_devices_refresh": "Refresh devices"
 }

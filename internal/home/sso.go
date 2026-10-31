@@ -116,7 +116,7 @@ func (s *ssoSessions) RevokeSession(ctx context.Context, token string) error {
 }
 
 func (web *webAPI) registerSSOHandlers() {
-	for _, path := range []string{sso.ConfigPath, sso.StartPath, sso.CallbackPath} {
+	for _, path := range []string{sso.ConfigPath, sso.StartPath, sso.CallbackPath, sso.RefreshPath, sso.DevicesPath, sso.RevokeDevicePath} {
 		web.conf.mux.Handle(path, web.postInstallHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			web.auth.sso.ServeHTTP(w, r)
 		})))

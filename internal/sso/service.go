@@ -29,6 +29,10 @@ const (
 	sessionCookie     = "agh_session"
 	transactionTTL    = 5 * time.Minute
 	maxTransactions   = 1024
+	RefreshPath       = "/control/sso/refresh"
+	DevicesPath       = "/control/sso/devices"
+	RevokeDevicePath  = "/control/sso/devices/revoke"
+	refreshCookie     = "agh_sso_refresh"
 )
 
 // Host is the narrow boundary to the application's existing local users.
@@ -49,6 +53,7 @@ type LoginOptions struct {
 type transaction struct {
 	binding, nonce, verifier, peer string
 	expires                        time.Time
+	remember                       bool
 }
 type providerState struct {
 	oauth    oauth2.Config
@@ -116,15 +121,19 @@ func (s *Service) Options() LoginOptions {
 
 // PublicPath is an exact route predicate, never a prefix exception.
 func PublicPath(path string) bool {
-	return path == ConfigPath || path == StartPath || path == CallbackPath
+	return path == ConfigPath || path == StartPath || path == CallbackPath || path == RefreshPath
 }
 
-// ServeHTTP handles only the three public SSO routes.
+// ServeHTTP handles exact SSO routes; device management also requires a session.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "no-referrer")
-	if !PublicPath(r.URL.Path) {
+	if !PublicPath(r.URL.Path) && r.URL.Path != DevicesPath && r.URL.Path != RevokeDevicePath {
 		http.NotFound(w, r)
+		return
+	}
+	if r.URL.Path == RefreshPath || r.URL.Path == DevicesPath || r.URL.Path == RevokeDevicePath {
+		s.serveRemember(w, r)
 		return
 	}
 	if r.Method != http.MethodGet {
@@ -155,7 +164,13 @@ func randomHex(size int) (string, error) {
 }
 
 func (s *Service) start(w http.ResponseWriter, r *http.Request) {
+	remember := r.URL.Query()["remember"]
+	if len(remember) > 1 || (len(remember) == 1 && remember[0] != "1") {
+		http.Error(w, "Invalid remember option", http.StatusBadRequest)
+		return
+	}
 	state, t, err := s.newTransaction(r.RemoteAddr)
+	t.remember = len(remember) == 1
 	if err != nil {
 		s.fail(w, r, "unavailable")
 		return
@@ -202,10 +217,20 @@ func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, "denied")
 		return
 	}
+	if err = s.LogoutRemembered(w, r); err != nil {
+		s.fail(w, r, "unavailable")
+		return
+	}
 	cookie, err := s.issueSession(r, login)
 	if err != nil {
 		s.fail(w, r, "unavailable")
 		return
+	}
+	if t.remember {
+		if err = s.rememberSession(w, r, login, cookie); err != nil {
+			s.fail(w, r, "unavailable")
+			return
+		}
 	}
 	s.logger.InfoContext(r.Context(), "sign-in succeeded", "method", "oidc", "user", login)
 	s.clearTransaction(w)

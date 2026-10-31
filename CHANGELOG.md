@@ -20,6 +20,10 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Added
 
+- Optional remembered SSO devices with a default 180-day lifetime (up to one
+  year), rotating 15-minute sessions, replay detection, and per-device
+  revocation from general settings.
+
 - Installable PWA support for the SolidJS web UI, including standalone launch
   and reverse-proxy subpath support.
 

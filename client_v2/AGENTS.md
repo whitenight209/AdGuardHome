@@ -80,7 +80,7 @@ client_v2/
 │   ├── index.tsx                  # Main app entry (renders <App/>)
 │   ├── index.pcss                 # Global CSS (vars, reset)
 │   ├── initialState.ts            # Domain model types + initial form state
-│   ├── api/                       # Orval-generated typed client + customFetch mutator
+│   ├── api/                       # Generated client, HTTP mutator and session renewal
 │   ├── common/
 │   │   ├── controls/              # Input primitives (Checkbox, Input, Select, Switch, …)
 │   │   ├── ui/                    # Higher-level UI (Button, Dialog, Table, Tabs, Sidebar, …)
@@ -96,7 +96,7 @@ client_v2/
 │   ├── store/types.ts             # Legacy type re-exports (post-Redux)
 │   ├── stores/                    # SolidJS createStore modules — one per domain
 │   ├── types/                     # css-modules.d.ts ambient declarations
-│   ├── features/sso/             # Isolated optional SSO login component
+│   ├── features/sso/             # Isolated SSO login and remembered-device UI
 │   ├── login/                     # Standalone login entry
 │   ├── install/                   # Standalone install-wizard entry
 │   ├── forgot_password/           # Standalone password-reset entry

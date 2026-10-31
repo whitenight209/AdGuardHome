@@ -1,18 +1,13 @@
 import { HTML_PAGES } from '../helpers/constants';
+import { ApiError } from './httpError';
+import { renewSession } from './sessionRenewal';
+
+export { ApiError } from './httpError';
 
 type CustomFetchOptions = RequestInit & {
     skipAuthRedirect?: boolean;
+    skipSessionRefresh?: boolean;
 };
-
-export class ApiError extends Error {
-    constructor(
-        message: string,
-        public readonly status: number,
-    ) {
-        super(message);
-        this.name = 'ApiError';
-    }
-}
 
 /**
  * Custom fetch mutator for orval-generated API client.
@@ -29,7 +24,12 @@ export class ApiError extends Error {
  * - On 204 → returns empty string ''
  */
 export const customFetch = async <T>(url: string, options?: CustomFetchOptions): Promise<T> => {
-    const { skipAuthRedirect, ...fetchOptions } = options || {};
+    const { skipAuthRedirect, skipSessionRefresh, ...fetchOptions } = options || {};
+
+    if (url.endsWith('/sso/refresh')) {
+        if (!(await renewSession())) throw new ApiError('Session renewal required | 401', 401);
+        return undefined as T;
+    }
 
     const fullUrl = url;
     const headers: Record<string, string> = {};
@@ -45,6 +45,16 @@ export const customFetch = async <T>(url: string, options?: CustomFetchOptions):
             ...fetchOptions,
             headers,
         });
+
+        if (
+            response.status === 401 &&
+            !skipSessionRefresh &&
+            !url.endsWith('/login') &&
+            !url.includes('/sso/oidc/') &&
+            (await renewSession())
+        ) {
+            return customFetch<T>(url, { ...options, skipSessionRefresh: true });
+        }
 
         const text = await response.text();
         const data: T = text
@@ -79,7 +89,7 @@ export const customFetch = async <T>(url: string, options?: CustomFetchOptions):
 
         return data;
     } catch (error) {
-        if (error instanceof Error && error.message.includes('|')) {
+        if (error instanceof ApiError || (error instanceof Error && error.message.includes('|'))) {
             throw error;
         }
 

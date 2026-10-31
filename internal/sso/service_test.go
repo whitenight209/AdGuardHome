@@ -107,9 +107,13 @@ func newFixture(t *testing.T) *fixture {
 }
 
 func (f *fixture) begin(t *testing.T) (string, *http.Cookie) {
+	return f.beginAt(t, StartPath)
+}
+
+func (f *fixture) beginAt(t *testing.T, path string) (string, *http.Cookie) {
 	t.Helper()
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, StartPath, nil)
+	r := httptest.NewRequest(http.MethodGet, path, nil)
 	f.service.ServeHTTP(w, r)
 	require.Equal(t, 302, w.Code)
 	target, err := url.Parse(w.Header().Get("Location"))

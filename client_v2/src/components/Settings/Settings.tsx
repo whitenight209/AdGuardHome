@@ -7,6 +7,7 @@ import { SCROLL_QUERY_KEY } from 'panel/components/Routes/Paths';
 import { useSearchParams } from '@solidjs/router';
 
 import intl from 'panel/common/intl';
+import { RememberedDevices } from 'panel/features/sso/RememberedDevices';
 import { Button } from 'panel/common/ui/Button';
 import { ConfirmDialog } from 'panel/common/ui/ConfirmDialog';
 import theme from 'panel/lib/theme';
@@ -421,6 +422,7 @@ export const Settings = () => {
                 >
                     <PageLoader />
                 </Show>
+                <RememberedDevices />
             </div>
         </div>
     );

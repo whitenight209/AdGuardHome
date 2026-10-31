@@ -68,6 +68,7 @@ sso:
     client_secret_file: /etc/AdGuardHome/oidc-client-secret
     public_url: https://YOUR-DNS-HOST/
     session_ttl: 8h
+    remember_ttl: 4320h # 180 days; use 8760h for 365 days
     mappings:
       - subject: "YOUR-GOOGLE-SUB"
         username: admin
@@ -103,8 +104,39 @@ local authentication from starting. Error pages show generic messages.
 
 SSO sessions use `data/sso-sessions.db`; local sessions still use
 `data/sessions.db`. Back up both with the service stopped. No external database
-service is needed. The default SSO session lifetime is eight hours, with a
-maximum of 24 hours. Sessions are not renewed with provider refresh tokens.
+service is needed. Without **Keep me signed in on this device**, SSO sessions retain the
+existing fixed lifetime: eight hours by default, with a maximum of 24 hours.
+With that option selected, the app issues a 15-minute access session and a
+separate rotating device cookie. The remembered-device lifetime defaults to
+180 days (`4320h`) and is configurable from one hour up to 365 days (`8760h`)
+using `sso.oidc.remember_ttl`. Go duration syntax uses hours, not `d` or `y`.
+The absolute deadline never slides forward during renewal.
+
+Both cookies are host-only, `HttpOnly`, `Secure`, and `SameSite=Lax`. The
+refresh cookie is scoped to the configured application path. Only a digest
+of the random refresh credential is stored in the device database. These
+are AdGuard Home credentials, not Google access or refresh tokens. Provider
+tokens are not persisted and Google is not contacted during device renewal.
+
+Renewal requires a same-origin POST to `/control/sso/refresh` with an exact
+Origin match to `public_url`. Access failures retry once after renewal.
+Concurrent requests share one renewal operation; Web Locks serialize it
+across tabs and recheck the shared access cookie before rotating. When an
+expired access cookie redirects a reopened app to login, the login page
+tries device renewal before requiring Google sign-in again.
+
+Every successful renewal replaces both credentials and invalidates the
+previous access session. Reusing a consumed refresh credential revokes its
+entire device family. Expiration, removal of the local mapped user, SSO
+disabling, or authorization-policy changes also invalidate device access.
+Device renewal does not recheck Google's account status: revoke a device
+explicitly when access must end before its absolute deadline.
+
+Open **General settings → Remembered devices** to view your SSO devices and
+sign out one device, including the current device. Device listing and
+revocation are restricted to the signed-in SSO user's own devices. Logout
+revokes the current device even if its access cookie has already expired.
+Other independently signed-in devices are not affected.
 
 To revoke all SSO sessions, set `sso.enabled: false` and restart. A restart
 also applies mapping, issuer, client-ID, public-URL, or lifetime changes and
@@ -113,6 +145,27 @@ restore purged sessions. Changing only the secret does not revoke sessions.
 Logout only ends the current AdGuard Home session; the Google login remains.
 Google account suspension takes effect on the next SSO login, not immediately
 for an already-issued application session.
+
+## Keeping upstream synchronization small
+
+Remembered-device behavior is isolated in:
+
+- `internal/sso/remember_config.go`: long-session duration policy.
+- `internal/sso/remember_store.go`: device persistence, rotation and replay
+  detection; no HTTP or host dependencies.
+- `internal/sso/remember_http.go`: cookie and HTTP handling.
+- `client_v2/src/api/sessionRenewal.ts`: browser renewal coordination.
+- `client_v2/src/features/sso/`: login choice and device-management UI.
+
+The existing auth store and SSO callback contain only integration points.
+The general settings page mounts the separate device-management component.
+The OpenAPI spec owns the generated client and types. Tests live alongside
+these boundaries instead of adding remember-me policy to DNS code.
+
+The policy fingerprint includes remembered-device lifetime. Deploying this
+version requires one new login for sessions issued under the old policy.
+Rebuild the embedded frontend and restart the binary after deployment.
+Existing sessions are not silently upgraded to long-lived credentials.
 
 ## Raspberry Pi 4 builds
 

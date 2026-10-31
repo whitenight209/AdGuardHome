@@ -247,6 +247,11 @@ func newCookie(
 // handleLogout is the handler for the GET /control/logout HTTP API.
 func (web *webAPI) handleLogout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	if err := web.auth.sso.LogoutRemembered(w, r); err != nil {
+		web.logger.ErrorContext(ctx, "revoking remembered device", slogutil.KeyError, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	respHdr := w.Header()
 	c, err := r.Cookie(sessionCookieName)
@@ -285,7 +290,7 @@ func (web *webAPI) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respHdr.Set(httphdr.Location, web.auth.sso.ExternalPath("/login.html"))
-	respHdr.Set(httphdr.SetCookie, c.String())
+	respHdr.Add(httphdr.SetCookie, c.String())
 	w.WriteHeader(http.StatusFound)
 }
 
@@ -322,6 +327,7 @@ func isPublicResource(p string) (ok bool) {
 
 	paths := []string{
 		"/control/login",
+		"/control/logout",
 		"/apple/doh.mobileconfig",
 		"/apple/dot.mobileconfig",
 		"/control/install/get_addresses",

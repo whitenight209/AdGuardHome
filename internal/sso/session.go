@@ -14,9 +14,10 @@ var sessionBucket = []byte("sso-sessions-v1")
 
 // Session contains only local authorization information, never provider tokens.
 type Session struct {
-	Login   string    `json:"login"`
-	Expires time.Time `json:"expires"`
-	Policy  string    `json:"policy"`
+	Login    string    `json:"login"`
+	DeviceID string    `json:"device_id,omitempty"`
+	Expires  time.Time `json:"expires"`
+	Policy   string    `json:"policy"`
 }
 
 // Store owns the separate embedded SSO session database.
@@ -49,7 +50,10 @@ func OpenStore(path string, config Config, now func() time.Time) (*Store, error)
 		if e != nil {
 			return e
 		}
-		return s.purge(b, config.Enabled)
+		if e := s.purge(b, config.Enabled); e != nil {
+			return e
+		}
+		return s.initDevices(tx, config.Enabled)
 	})
 	if err != nil {
 		_ = db.Close()
@@ -74,6 +78,9 @@ func (s *Store) Find(token string) (*Session, error) {
 			return e
 		}
 		if record.Policy == s.policy && s.now().Before(record.Expires) {
+			if record.DeviceID != "" && !s.deviceValid(tx, record.DeviceID) {
+				return nil
+			}
 			sess = &record
 		}
 		return nil
@@ -109,7 +116,19 @@ func (s *Store) Delete(token string) error {
 	if s.db == nil {
 		return nil
 	}
-	return s.db.Update(func(tx *bbolt.Tx) error { return tx.Bucket(sessionBucket).Delete([]byte(token)) })
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		b := tx.Bucket(sessionBucket)
+		var record Session
+		if v := b.Get([]byte(token)); v != nil {
+			if err := json.Unmarshal(v, &record); err != nil {
+				return err
+			}
+			if record.DeviceID != "" {
+				return s.revokeDevice(tx, record.DeviceID)
+			}
+		}
+		return b.Delete([]byte(token))
+	})
 }
 
 // Close releases the store.
