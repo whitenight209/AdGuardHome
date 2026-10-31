@@ -23,7 +23,8 @@
     "translations:check": "node ./scripts/check-translations.js",
     "locales:generate": "node ./scripts/generate-locales.js",
     "locales:check": "node ./scripts/check-locales.js",
-    "api:generate": "orval --config ./orval.config.ts && bash scripts/postgenerate.sh"
+    "api:generate": "orval --config ./orval.config.ts && bash scripts/postgenerate.sh && npm run api:generate:sso",
+    "api:generate:sso": "orval --config ./orval.sso.config.ts && bash scripts/postgenerate-sso.sh"
   },
   "type": "module",
   "dependencies": {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renewSession } from 'panel/api/sessionRenewal';
+import { renewSession } from 'panel/features/sso/api/sessionRenewal';
 
 const originalLocation = Object.getOwnPropertyDescriptor(window, 'location')!;
 const originalLocks = Object.getOwnPropertyDescriptor(navigator, 'locks');

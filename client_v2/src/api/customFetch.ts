@@ -1,12 +1,11 @@
 import { HTML_PAGES } from '../helpers/constants';
 import { ApiError } from './httpError';
-import { renewSession } from './sessionRenewal';
+import { sendRequest } from './transport';
 
 export { ApiError } from './httpError';
 
 type CustomFetchOptions = RequestInit & {
     skipAuthRedirect?: boolean;
-    skipSessionRefresh?: boolean;
 };
 
 /**
@@ -24,12 +23,7 @@ type CustomFetchOptions = RequestInit & {
  * - On 204 → returns empty string ''
  */
 export const customFetch = async <T>(url: string, options?: CustomFetchOptions): Promise<T> => {
-    const { skipAuthRedirect, skipSessionRefresh, ...fetchOptions } = options || {};
-
-    if (url.endsWith('/sso/refresh')) {
-        if (!(await renewSession())) throw new ApiError('Session renewal required | 401', 401);
-        return undefined as T;
-    }
+    const { skipAuthRedirect, ...fetchOptions } = options || {};
 
     const fullUrl = url;
     const headers: Record<string, string> = {};
@@ -41,20 +35,10 @@ export const customFetch = async <T>(url: string, options?: CustomFetchOptions):
     }
 
     try {
-        const response = await fetch(fullUrl, {
+        const response = await sendRequest(fullUrl, {
             ...fetchOptions,
             headers,
         });
-
-        if (
-            response.status === 401 &&
-            !skipSessionRefresh &&
-            !url.endsWith('/login') &&
-            !url.includes('/sso/oidc/') &&
-            (await renewSession())
-        ) {
-            return customFetch<T>(url, { ...options, skipSessionRefresh: true });
-        }
 
         const text = await response.text();
         const data: T = text

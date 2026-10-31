@@ -1,4 +1,4 @@
-import { ApiError } from './httpError';
+import { ApiError } from 'panel/api/httpError';
 
 let renewal: Promise<boolean> | undefined;
 

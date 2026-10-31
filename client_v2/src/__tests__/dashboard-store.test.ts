@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('panel/api/sessionRenewal', () => ({ renewSession: vi.fn().mockResolvedValue(false) }));
-
 const mocks = vi.hoisted(() => ({
     tlsStatus: vi.fn(),
     getVersionJson: vi.fn(),

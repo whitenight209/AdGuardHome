@@ -1,9 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAuthConfig, refreshSSO } from 'panel/api/generated';
+import { getAuthConfig, refreshSSO } from 'panel/features/sso/api/generated';
 import { SsoLogin } from 'panel/features/sso/SsoLogin';
 
-vi.mock('panel/api/generated', () => ({
+vi.mock('panel/features/sso/api/generated', () => ({
     getAuthConfig: vi.fn(),
     refreshSSO: vi.fn().mockRejectedValue(new Error('no device')),
 }));

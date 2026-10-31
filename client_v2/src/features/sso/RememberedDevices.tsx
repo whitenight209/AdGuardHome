@@ -1,7 +1,7 @@
 import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
-import { getAuthConfig, getSSODevices, revokeSSODevice } from 'panel/api/generated';
+import { getAuthConfig, getSSODevices, revokeSSODevice } from 'panel/features/sso/api/generated';
 import { ApiError } from 'panel/api/customFetch';
-import type { SSODevice } from 'panel/api/model';
+import type { SSODevice } from 'panel/features/sso/api/model';
 import intl from 'panel/common/intl';
 import { Button } from 'panel/common/ui/Button';
 

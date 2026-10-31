@@ -80,7 +80,7 @@ client_v2/
 │   ├── index.tsx                  # Main app entry (renders <App/>)
 │   ├── index.pcss                 # Global CSS (vars, reset)
 │   ├── initialState.ts            # Domain model types + initial form state
-│   ├── api/                       # Generated client, HTTP mutator and session renewal
+│   ├── api/                       # Upstream generated client and generic transport
 │   ├── common/
 │   │   ├── controls/              # Input primitives (Checkbox, Input, Select, Switch, …)
 │   │   ├── ui/                    # Higher-level UI (Button, Dialog, Table, Tabs, Sidebar, …)
@@ -96,7 +96,7 @@ client_v2/
 │   ├── store/types.ts             # Legacy type re-exports (post-Redux)
 │   ├── stores/                    # SolidJS createStore modules — one per domain
 │   ├── types/                     # css-modules.d.ts ambient declarations
-│   ├── features/sso/             # Isolated SSO login and remembered-device UI
+│   ├── features/sso/             # SSO bootstrap, UI and independent generated API
 │   ├── login/                     # Standalone login entry
 │   ├── install/                   # Standalone install-wizard entry
 │   ├── forgot_password/           # Standalone password-reset entry
@@ -114,6 +114,7 @@ client_v2/
 ├── playwright.config.ts           # e2e config (base URL :3000)
 ├── postcss.config.js              # postcss-import + nested + autoprefixer
 ├── package.json                   # Scripts + dependencies
+├── orval.sso.config.ts             # Fork API generation from openapi/sso.yaml
 └── constants.js                   # BUILD_ENVS, BASE_URL = 'control'
 ```
 
@@ -295,6 +296,11 @@ Universal design principles the codebase follows:
   → api → backend. Stores never import components; api never imports stores.
 - **Explicit Boundaries** — modules interact through named exports; no
   reaching into another module's internals.
+- **Fork extension boundaries.** SSO API contracts and generated code belong
+  to `openapi/sso.yaml` and `src/features/sso/api/`, not the upstream OpenAPI
+  spec or shared generated client. Use the generic transport hook and
+  feature bootstrap for request policies. `npm run api:generate:sso` must
+  not rewrite upstream API files. Keep boundary tests for this separation.
 - **Data Flow Clarity** — user action → store action function → generated
   API function → `setState` → reactive UI update. Data moves in one
   predictable path.

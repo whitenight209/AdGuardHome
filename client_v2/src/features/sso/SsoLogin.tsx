@@ -1,7 +1,7 @@
 import { createSignal, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import intl from 'panel/common/intl';
-import { getAuthConfig, refreshSSO } from 'panel/api/generated';
-import type { AuthConfig } from 'panel/api/model';
+import { getAuthConfig, refreshSSO } from 'panel/features/sso/api/generated';
+import type { AuthConfig } from 'panel/features/sso/api/model';
 
 import { GoogleIcon } from './GoogleIcon';
 import s from './SsoLogin.module.pcss';

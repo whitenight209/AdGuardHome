@@ -9,6 +9,7 @@ import { BUILD_ENVS } from './constants.js';
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 const RESOURCES_PATH = __dirname;
+const ENTRY_SSO = path.resolve(RESOURCES_PATH, 'src/features/sso/bootstrap.ts');
 const ENTRY_MAIN = path.resolve(RESOURCES_PATH, 'src/index.tsx');
 const ENTRY_INSTALL = path.resolve(RESOURCES_PATH, 'src/install/index.tsx');
 const ENTRY_LOGIN = path.resolve(RESOURCES_PATH, 'src/login/index.tsx');
@@ -51,10 +52,10 @@ const config = {
     target: 'web',
     context: RESOURCES_PATH,
     entry: {
-        main: ENTRY_MAIN,
-        install: ENTRY_INSTALL,
-        login: ENTRY_LOGIN,
-        forgot_password: ENTRY_FORGOT_PASSWORD,
+        main: [ENTRY_SSO, ENTRY_MAIN],
+        install: [ENTRY_SSO, ENTRY_INSTALL],
+        login: [ENTRY_SSO, ENTRY_LOGIN],
+        forgot_password: [ENTRY_SSO, ENTRY_FORGOT_PASSWORD],
     },
     output: {
         path: PUBLIC_PATH,

@@ -247,11 +247,6 @@ func newCookie(
 // handleLogout is the handler for the GET /control/logout HTTP API.
 func (web *webAPI) handleLogout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	if err := web.auth.sso.LogoutRemembered(w, r); err != nil {
-		web.logger.ErrorContext(ctx, "revoking remembered device", slogutil.KeyError, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 
 	respHdr := w.Header()
 	c, err := r.Cookie(sessionCookieName)
@@ -301,7 +296,7 @@ func (web *webAPI) registerAuthHandlers() {
 		http.MethodPost+" "+"/control/login",
 		web.postInstallHandler(http.HandlerFunc(web.handleLogin)),
 	)
-	web.httpReg.Register(http.MethodGet, "/control/logout", web.handleLogout)
+	web.httpReg.Register(http.MethodGet, "/control/logout", web.handleSSOLogout)
 }
 
 // isPublicResource returns true if p is a path to a public resource.

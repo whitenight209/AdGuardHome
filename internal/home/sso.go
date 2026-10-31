@@ -11,6 +11,7 @@ import (
 	"github.com/AdguardTeam/AdGuardHome/internal/aghuser"
 	"github.com/AdguardTeam/AdGuardHome/internal/sso"
 	"github.com/AdguardTeam/golibs/errors"
+	"github.com/AdguardTeam/golibs/logutil/slogutil"
 )
 
 // ssoSessions adapts the isolated SSO store to the upstream session contract.
@@ -113,6 +114,17 @@ func (s *ssoSessions) RevokeSession(ctx context.Context, token string) error {
 		return nil
 	}
 	return s.DeleteByToken(ctx, t)
+}
+
+// handleSSOLogout adds remembered-device revocation around the upstream handler.
+func (web *webAPI) handleSSOLogout(w http.ResponseWriter, r *http.Request) {
+	if err := web.auth.sso.LogoutRemembered(w, r); err != nil {
+		web.logger.ErrorContext(r.Context(), "revoking remembered device", slogutil.KeyError, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	web.handleLogout(w, r)
 }
 
 func (web *webAPI) registerSSOHandlers() {

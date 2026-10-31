@@ -128,7 +128,7 @@ func TestSSOSubpathLocalCookieAndLogout(t *testing.T) {
 	response := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/control/logout", nil)
 	request.AddCookie(cookie)
-	web.handleLogout(response, request)
+	web.handleSSOLogout(response, request)
 	require.Equal(t, "/vault/login.html", response.Header().Get("Location"))
 	require.Equal(t, "/vault/", response.Result().Cookies()[0].Path)
 	token, err := sessionTokenFromHex(cookie.Value)

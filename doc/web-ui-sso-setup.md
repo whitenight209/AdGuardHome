@@ -154,13 +154,35 @@ Remembered-device behavior is isolated in:
 - `internal/sso/remember_store.go`: device persistence, rotation and replay
   detection; no HTTP or host dependencies.
 - `internal/sso/remember_http.go`: cookie and HTTP handling.
-- `client_v2/src/api/sessionRenewal.ts`: browser renewal coordination.
+- `openapi/sso.yaml`: the fork-owned API contract, independent of upstream's
+  `openapi/openapi.yaml`.
+- `client_v2/src/features/sso/api/`: generated client/types and browser
+  renewal/transport logic.
+- `client_v2/src/features/sso/bootstrap.ts`: enables the extension before
+  each HTML entry point.
 - `client_v2/src/features/sso/`: login choice and device-management UI.
+
+The common HTTP parser calls a generic transport hook and does not import
+SSO code or recognize SSO endpoints. Bootstrap registers the SSO transport;
+without bootstrap, requests retain native fetch behavior. Remembered-device
+logout is wrapped in `internal/home/sso.go`, keeping its policy out of the
+upstream logout handler.
 
 The existing auth store and SSO callback contain only integration points.
 The general settings page mounts the separate device-management component.
-The OpenAPI spec owns the generated client and types. Tests live alongside
+The separate SSO OpenAPI spec owns its generated client and types. Tests live alongside
 these boundaries instead of adding remember-me policy to DNS code.
+
+From `client_v2/`, run `npm run api:generate:sso` to regenerate only the
+extension client. `npm run api:generate` regenerates both API clients. Never
+add fork-only SSO routes or models back to the upstream specification or
+shared generated file. Keep extension transport tests under
+`src/__tests__/sso/`; boundary tests enforce this separation.
+
+When merging upstream, resolve the core API against upstream first, then
+regenerate the SSO client independently. Retain the small transport hook,
+bootstrap entries and settings-panel mount. Do not hand-merge generated
+SSO operations into the upstream client's generated file.
 
 The policy fingerprint includes remembered-device lifetime. Deploying this
 version requires one new login for sessions issued under the old policy.

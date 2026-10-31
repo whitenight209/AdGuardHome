@@ -1,11 +1,11 @@
 import { render, screen, waitFor, fireEvent } from '@solidjs/testing-library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAuthConfig, getSSODevices, revokeSSODevice } from 'panel/api/generated';
+import { getAuthConfig, getSSODevices, revokeSSODevice } from 'panel/features/sso/api/generated';
 import { ApiError } from 'panel/api/customFetch';
 import { RememberedDevices } from 'panel/features/sso/RememberedDevices';
 import { copy } from 'panel/__tests__/helpers/copy';
 
-vi.mock('panel/api/generated', () => ({
+vi.mock('panel/features/sso/api/generated', () => ({
     getAuthConfig: vi.fn(),
     getSSODevices: vi.fn(),
     revokeSSODevice: vi.fn(),
