@@ -20,7 +20,7 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Changed
 
-- Shortened the PWA home-screen label to AdGuard to fit mobile launchers.
+- Shortened the PWA home-screen label to AG Home to fit mobile launchers.
 
 ### Added
 
