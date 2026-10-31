@@ -440,7 +440,8 @@ func (ds *DefaultSessionStorage) remove(ctx context.Context, t SessionToken) (er
 
 	bkt := tx.Bucket([]byte(bboltBucketSessions))
 	if bkt == nil {
-		return errors.Error("no bucket")
+		// An absent bucket means that there is no session to remove.
+		return nil
 	}
 
 	err = bkt.Delete(t[:])
