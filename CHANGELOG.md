@@ -20,6 +20,9 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Added
 
+- Installable PWA support for the SolidJS web UI, including standalone launch
+  and reverse-proxy subpath support.
+
 - SSO login presentation with a themed Google button and icon; local login
   controls are hidden while SSO is enabled.
 

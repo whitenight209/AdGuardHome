@@ -103,6 +103,8 @@ client_v2/
 │   ├── __locales/                 # Translation JSON (en, ru, de, …)
 │   └── __tests__/                 # Vitest unit/integration tests
 ├── tests/e2e/                     # Playwright e2e specs
+├── public/                        # HTML entry points and static assets
+│   └── assets/                    # Favicons, PWA manifest and install icons
 ├── scripts/                       # check-translations.js, translation-audit.js
 ├── webpack.common.js              # 4 entry points, loaders, path aliases
 ├── webpack.dev.js                 # Dev server + backend proxy
