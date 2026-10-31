@@ -31,9 +31,13 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Security
 
-- Go version has been updated to prevent the possibility of exploiting the Go vulnerabilities fixed in [1.27.2][go-1.27.2].
+- Go version has been updated to prevent the possibility of exploiting the Go vulnerabilities fixed in [1.27.3][go-1.27.3].
 
 ### Fixed
+
+- Invalid SVCB record from DDR when DoH routes are empty.
+
+- Schedule shift on clock change cases ([#8670]).
 
 - Incorrect behaviour on the first launch with the `--check-config` flag.
 
@@ -75,6 +79,7 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 - The support for macOS 13 Ventura, see [Go 1.27 release notes][go-1.27-notes].
 
+[#8670]:           https://github.com/AdguardTeam/AdGuardHome/issues/8670
 [#8565]:           https://github.com/AdguardTeam/AdGuardHome/issues/8565
 [#8572]:           https://github.com/AdguardTeam/AdGuardHome/issues/8572
 [#8608]:           https://github.com/AdguardTeam/AdGuardHome/issues/8608
@@ -85,7 +90,7 @@ NOTE: Add new changes BELOW THIS COMMENT.
 [#8637]:           https://github.com/AdguardTeam/AdGuardHome/issues/8637
 [#8644]:           https://github.com/AdguardTeam/AdGuardHome/issues/8644
 [#8661]:           https://github.com/AdguardTeam/AdGuardHome/issues/8661
-[go-1.27.2]:       https://groups.google.com/g/golang-announce/c/U2fTuyDJznI
+[go-1.27.3]:       https://groups.google.com/g/golang-announce/c/66pojueaQek
 [go-1.27-notes]:   https://go.dev/doc/go1.27#darwin
 
 <!--
