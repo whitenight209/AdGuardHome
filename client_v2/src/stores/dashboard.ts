@@ -11,7 +11,7 @@ import {
     getProfile,
     updateProfile,
 } from 'panel/api/generated';
-import { customFetch } from 'panel/api/customFetch';
+import { ApiError, customFetch } from 'panel/api/customFetch';
 import type { ServerStatus } from 'panel/api/model/serverStatus';
 import type { VersionInfo } from 'panel/api/model/versionInfo';
 import type { Clients } from 'panel/api/model/clients';
@@ -117,8 +117,12 @@ const checkStatus = async (
                 attempts - 1,
             );
         }
-    } catch {
+    } catch (error) {
         statusTimeout = rmTimeout(statusTimeout);
+        if (error instanceof ApiError && [401, 403].includes(error.status)) {
+            handleRequestError();
+            return;
+        }
         statusTimeout = setTimeout(
             checkStatus,
             CHECK_TIMEOUT,

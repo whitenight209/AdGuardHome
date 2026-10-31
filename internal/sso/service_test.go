@@ -156,6 +156,46 @@ func TestRoundTrip(t *testing.T) {
 	require.Equal(t, 1, f.exchanges)
 }
 
+func TestPersistentSessionCookieLifetime(t *testing.T) {
+	for _, ttl := range []string{"", "24h"} {
+		t.Run("ttl="+ttl, func(t *testing.T) {
+			f := newFixture(t)
+			f.service.config.OIDC.SessionTTL = ttl
+			f.service.config.OIDC.PublicURL = "https://dns.example.com/adguard/"
+			f.service.store.policy = f.service.config.fingerprint()
+			now := time.Now().UTC().Truncate(time.Second)
+			f.service.now = func() time.Time { return now }
+			f.service.store.now = f.service.now
+			state, transaction := f.begin(t)
+			response := f.finish(state, transaction)
+			require.Equal(t, "/adguard/", response.Header().Get("Location"))
+			var cookie *http.Cookie
+			for _, candidate := range response.Result().Cookies() {
+				if candidate.Name == sessionCookie {
+					cookie = candidate
+				}
+			}
+			require.NotNil(t, cookie)
+			lifetime, err := f.service.config.TTL()
+			require.NoError(t, err)
+			require.Equal(t, now.Add(lifetime), cookie.Expires)
+			require.Equal(t, "/adguard/", cookie.Path)
+			require.Empty(t, cookie.Domain)
+			require.True(t, cookie.Secure)
+			require.True(t, cookie.HttpOnly)
+			require.Equal(t, http.SameSiteLaxMode, cookie.SameSite)
+			record, err := f.service.store.Find(cookie.Value)
+			require.NoError(t, err)
+			require.NotNil(t, record)
+			require.Equal(t, cookie.Expires, record.Expires)
+			f.service.store.now = func() time.Time { return now.Add(lifetime) }
+			record, err = f.service.store.Find(cookie.Value)
+			require.NoError(t, err)
+			require.Nil(t, record)
+		})
+	}
+}
+
 func TestRejectIDTokens(t *testing.T) {
 	cases := map[string]map[string]any{
 		"signature": {"bad_signature": true},

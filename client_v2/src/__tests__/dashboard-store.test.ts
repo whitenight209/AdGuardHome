@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     tlsStatus: vi.fn(),
@@ -26,7 +26,59 @@ vi.mock('panel/stores/toasts', () => ({
 }));
 
 import { resetStore } from 'panel/__tests__/helpers/resetStore';
-import { getDnsStatus, getClients, refreshDnsStatus, dashboardState } from 'panel/stores/dashboard';
+import {
+    getDnsStatus,
+    getTimerStatus,
+    getClients,
+    refreshDnsStatus,
+    dashboardState,
+} from 'panel/stores/dashboard';
+
+describe('session validation when returning to the app', () => {
+    const originalLocation = Object.getOwnPropertyDescriptor(window, 'location')!;
+    const reload = vi.fn();
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+        Object.defineProperty(window, 'location', {
+            configurable: true,
+            value: {
+                href: 'https://dns.example.com/adguard/',
+                pathname: '/adguard/',
+                reload,
+            },
+        });
+    });
+
+    afterEach(() => {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+        Object.defineProperty(window, 'location', originalLocation);
+    });
+
+    it.each([401, 403])('immediately reloads after HTTP %i instead of retrying for a minute', async (status) => {
+        const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status }));
+
+        await getTimerStatus();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(reload).toHaveBeenCalledOnce();
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('continues retrying a temporary server outage without logging out', async () => {
+        const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 503 }));
+
+        await getTimerStatus();
+        await vi.advanceTimersByTimeAsync(1000);
+
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(reload).not.toHaveBeenCalled();
+    });
+});
 
 describe('getDnsStatus', () => {
     beforeEach(() => vi.clearAllMocks());

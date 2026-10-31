@@ -62,6 +62,29 @@ func TestDisablePermanentlyPurgesSessions(t *testing.T) {
 	require.Nil(t, sess)
 }
 
+func TestSessionRevocationSurvivesRestart(t *testing.T) {
+	c := testConfig(t)
+	path := filepath.Join(t.TempDir(), "sso.db")
+	store, err := OpenStore(path, c, nil)
+	require.NoError(t, err)
+	session := Session{Login: "admin", Expires: time.Now().UTC().Add(time.Hour), Policy: c.fingerprint()}
+	require.NoError(t, store.put("device-one", session))
+	require.NoError(t, store.put("device-two", session))
+	require.NoError(t, store.Delete("device-one"))
+	require.NoError(t, store.Close())
+
+	store, err = OpenStore(path, c, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, store.Close()) })
+	revoked, err := store.Find("device-one")
+	require.NoError(t, err)
+	require.Nil(t, revoked)
+	other, err := store.Find("device-two")
+	require.NoError(t, err)
+	require.NotNil(t, other)
+	require.Equal(t, session.Expires, other.Expires)
+}
+
 func TestDisabledDoesNotCreateDatabase(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sso.db")
 	store, err := OpenStore(path, Config{}, nil)

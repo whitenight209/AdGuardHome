@@ -38,6 +38,9 @@ NOTE: Add new changes BELOW THIS COMMENT.
 
 ### Fixed
 
+- Return to login promptly when a web UI session expires, including from
+  installed apps and reverse-proxy subpaths with hash routes.
+
 - Invalid SVCB record from DDR when DoH routes are empty.
 
 - Schedule shift on clock change cases ([#8670]).
