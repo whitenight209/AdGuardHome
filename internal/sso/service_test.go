@@ -343,7 +343,7 @@ func TestProviderOutageDoesNotBreakStartup(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, httptest.NewRequest(http.MethodGet, StartPath, nil))
 	require.Equal(t, "/login.html?sso_error=unavailable", w.Header().Get("Location"))
-	require.True(t, s.Options().LocalLoginEnabled)
+	require.False(t, s.Options().LocalLoginEnabled)
 	require.Empty(t, s.pending)
 }
 

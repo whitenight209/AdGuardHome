@@ -108,7 +108,7 @@ func (s *Service) Enabled() bool { return s != nil && s.config.Enabled }
 
 // Options returns the public login configuration.
 func (s *Service) Options() LoginOptions {
-	o := LoginOptions{LocalLoginEnabled: true, SSOEnabled: s.Enabled()}
+	o := LoginOptions{LocalLoginEnabled: !s.Enabled(), SSOEnabled: s.Enabled()}
 	if o.SSOEnabled {
 		o.SSODisplayName = s.config.OIDC.DisplayName
 		if o.SSODisplayName == "" {
