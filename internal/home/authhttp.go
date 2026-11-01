@@ -107,6 +107,11 @@ func (web *webAPI) writeErrorWithIP(
 
 // handleLogin is the handler for the POST /control/login HTTP API.
 func (web *webAPI) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if web.auth.sso.Enabled() {
+		http.Error(w, "password login is disabled; use Google sign-in", http.StatusForbidden)
+		return
+	}
+
 	ctx := r.Context()
 
 	req := loginJSON{}
@@ -343,6 +348,7 @@ const (
 // authentication middleware.
 type authMiddlewareDefaultConfig struct {
 	requireAuthentication bool
+	disablePasswordLogin  bool
 	// logger is used for logging the operation of the middleware.  It must not
 	// be nil.
 	//
@@ -370,6 +376,7 @@ type authMiddlewareDefaultConfig struct {
 // passes it with the context.
 type authMiddlewareDefault struct {
 	requireAuthentication bool
+	disablePasswordLogin  bool
 	logger                *slog.Logger
 	rateLimiter           loginRateLimiter
 	trustedProxies        netutil.SubnetSet
@@ -382,6 +389,7 @@ type authMiddlewareDefault struct {
 func newAuthMiddlewareDefault(c *authMiddlewareDefaultConfig) (mw *authMiddlewareDefault) {
 	return &authMiddlewareDefault{
 		requireAuthentication: c.requireAuthentication,
+		disablePasswordLogin:  c.disablePasswordLogin,
 		logger:                c.logger,
 		rateLimiter:           c.rateLimiter,
 		trustedProxies:        c.trustedProxies,
@@ -495,6 +503,10 @@ func (mw *authMiddlewareDefault) userFromRequest(
 	cookie, err := r.Cookie(sessionCookieName)
 	if err == nil {
 		return mw.userFromCookie(ctx, cookie.Value)
+	}
+
+	if mw.disablePasswordLogin {
+		return nil, nil
 	}
 
 	return mw.userFromRequestBasicAuth(ctx, r)

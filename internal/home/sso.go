@@ -78,7 +78,7 @@ func (s *ssoSessions) FindByToken(ctx context.Context, t aghuser.SessionToken) (
 		return nil, err
 	}
 	if external == nil {
-		return local, nil
+		return nil, nil
 	}
 	if local != nil {
 		return nil, fmt.Errorf("sso: ambiguous session token")

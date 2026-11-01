@@ -141,3 +141,33 @@ func TestSSOSubpathLocalCookieAndLogout(t *testing.T) {
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/login.html", nil))
 	require.Equal(t, "/vault/", response.Header().Get("Location"))
 }
+
+func TestSSORejectsPasswordAuthentication(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	secret := filepath.Join(dir, "secret")
+	require.NoError(t, os.WriteFile(secret, []byte("test"), 0o600))
+	hash, err := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.MinCost)
+	require.NoError(t, err)
+	a, err := newAuth(ctx, &authConfig{baseLogger: testSSOLogger(), rateLimiter: emptyRateLimiter{}, dbFilename: filepath.Join(dir, "sessions.db"), sessionTTL: time.Hour, users: []webUser{{Name: "admin", PasswordHash: string(hash)}}, sso: sso.Config{Enabled: true, OIDC: sso.OIDCConfig{Issuer: "https://accounts.google.com", ClientID: "test", ClientSecretFile: secret, PublicURL: "https://dns.example.com", Mappings: []sso.Mapping{{Subject: "id", Username: "admin"}}}}})
+	require.NoError(t, err)
+	t.Cleanup(func() { a.close(ctx) })
+	web := &webAPI{auth: a}
+	w := httptest.NewRecorder()
+	web.handleLogin(w, httptest.NewRequest(http.MethodPost, "/control/login", bytes.NewBufferString(`{"name":"admin","password":"correct-password"}`)))
+	require.Equal(t, http.StatusForbidden, w.Code)
+	require.Empty(t, w.Result().Cookies())
+	handler := a.middleware().Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	r := httptest.NewRequest(http.MethodGet, "/control/status", nil)
+	r.SetBasicAuth("admin", "correct-password")
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, r)
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+	user, err := a.users.ByLogin(ctx, "admin")
+	require.NoError(t, err)
+	local, err := a.sessions.(*ssoSessions).local.New(ctx, user)
+	require.NoError(t, err)
+	restored, err := a.sessions.FindByToken(ctx, local.Token)
+	require.NoError(t, err)
+	require.Nil(t, restored)
+}

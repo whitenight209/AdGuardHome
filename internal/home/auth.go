@@ -162,6 +162,7 @@ func (a *auth) middleware() (mw httputil.Middleware) {
 
 	return newAuthMiddlewareDefault(&authMiddlewareDefaultConfig{
 		requireAuthentication: a.sso.Enabled(),
+		disablePasswordLogin:  a.sso.Enabled(),
 		logger:                a.logger,
 		rateLimiter:           a.rateLimiter,
 		trustedProxies:        a.trustedProxies,
