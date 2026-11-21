@@ -28,6 +28,7 @@ import (
 	"github.com/AdguardTeam/golibs/logutil/slogutil"
 	"github.com/AdguardTeam/golibs/netutil"
 	"github.com/AdguardTeam/golibs/timeutil"
+	"github.com/AdguardTeam/golibs/validate"
 	"github.com/google/renameio/v2/maybe"
 	yaml "go.yaml.in/yaml/v4"
 )
@@ -57,23 +58,6 @@ type osConfig struct {
 	// RlimitNoFile is the maximum number of opened fd's per process.  Zero
 	// means use the default value.
 	RlimitNoFile uint64 `yaml:"rlimit_nofile"`
-}
-
-type clientsConfig struct {
-	// Sources defines the set of sources to fetch the runtime clients from.
-	Sources *clientSourcesConfig `yaml:"runtime_sources"`
-	// Persistent are the configured clients.
-	Persistent []*clientObject `yaml:"persistent"`
-}
-
-// clientSourceConfig is used to configure where the runtime clients will be
-// obtained from.
-type clientSourcesConfig struct {
-	WHOIS     bool `yaml:"whois"`
-	ARP       bool `yaml:"arp"`
-	RDNS      bool `yaml:"rdns"`
-	DHCP      bool `yaml:"dhcp"`
-	HostsFile bool `yaml:"hosts"`
 }
 
 // configuration is loaded from YAML.
@@ -139,10 +123,8 @@ type configuration struct {
 	// Filtering is a block with DNS filtering configuration settings.
 	Filtering *filtering.Config `yaml:"filtering"`
 
-	// Clients contains the YAML representations of the persistent clients.
-	// This field is only used for reading and writing persistent client data.
-	// Keep this field sorted to ensure consistent ordering.
-	Clients *clientsConfig `yaml:"clients"`
+	// Clients is a block with persistent clients configuration settings.
+	Clients *configmgr.ClientsConfig `yaml:"clients"`
 
 	// Log is a block with log configuration settings.
 	Log *configmgr.LogConfig `yaml:"log"`
@@ -390,8 +372,8 @@ var config = &configuration{
 		LocalDomainName: defaultLocalDomainName,
 		Enabled:         false,
 	},
-	Clients: &clientsConfig{
-		Sources: &clientSourcesConfig{
+	Clients: &configmgr.ClientsConfig{
+		Sources: &configmgr.ClientSourcesConfig{
 			WHOIS:     true,
 			ARP:       true,
 			RDNS:      true,
@@ -461,8 +443,13 @@ func validateBindHosts(
 
 // parseConfig loads configuration from the YAML file, upgrading it if
 // necessary.  l must not be nil.
-func parseConfig(ctx context.Context, l *slog.Logger, workDir, confPath string) (err error) {
-	// Do the upgrade if necessary.
+func parseConfig(
+	ctx context.Context,
+	l *slog.Logger,
+	workDir string,
+	confPath string,
+	legacyNoEtcHosts bool,
+) (err error) {
 	config.fileData, err = readConfigFile(ctx, l, workDir, confPath)
 	if err != nil {
 		// Don't wrap the error, because it's informative enough as is.
@@ -470,9 +457,10 @@ func parseConfig(ctx context.Context, l *slog.Logger, workDir, confPath string) 
 	}
 
 	migrator := configmigrate.New(&configmigrate.Config{
-		Logger:     l.With(slogutil.KeyPrefix, "config_migrator"),
-		WorkingDir: workDir,
-		DataDir:    filepath.Join(workDir, dataDir),
+		Logger:           l.With(slogutil.KeyPrefix, "config_migrator"),
+		WorkingDir:       workDir,
+		DataDir:          filepath.Join(workDir, dataDir),
+		LegacyNoEtcHosts: legacyNoEtcHosts,
 	})
 
 	var upgraded bool
@@ -585,12 +573,13 @@ func validateConfig(ctx context.Context, l *slog.Logger, fileData []byte) (err e
 		config.Filtering.FiltersUpdateIntervalHours = 24
 	}
 
-	if err = config.DHCP.Validate(); err != nil {
-		return fmt.Errorf("validating dhcp config: %w", err)
-	}
+	var errs []error
+	errs = validate.Append(errs, "dhcp", config.DHCP)
+	errs = validate.Append(errs, "http", &config.HTTPConfig)
+	errs = validate.Append(errs, "clients", config.Clients)
 
-	if err = config.HTTPConfig.Validate(); err != nil {
-		return fmt.Errorf("validating http config: %w", err)
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	if config.TLS.Enabled && config.TLS.PortHTTPS != 0 && len(config.HTTPConfig.DoH.Routes) == 0 {
@@ -635,9 +624,11 @@ func validateConfigPorts(conf *configuration) (err error) {
 			tcpPort(conf.TLS.PortDNSCrypt),
 		)
 
-		// TODO(e.burkov):  Consider adding a udpPort with the same value when
-		// we add support for HTTP/3 for web admin interface.
-		addPorts(udpPorts, udpPort(conf.TLS.PortDNSOverQUIC))
+		addPorts(udpPorts, udpPort(conf.TLS.PortDNSOverQUIC), udpPort(conf.TLS.PortDNSCrypt))
+
+		if conf.DNS.ServeHTTP3 {
+			addPorts(udpPorts, udpPort(conf.TLS.PortHTTPS))
+		}
 	}
 
 	var errs []error
@@ -733,7 +724,7 @@ func (c *configuration) write(
 		globalContext.dhcpServer.WriteDiskConfig(config.DHCP)
 	}
 
-	config.Clients.Persistent = globalContext.clients.forConfig()
+	globalContext.clients.WriteDiskConfig(config.Clients)
 
 	confPath = configFilePath(ctx, l, workDir, confPath)
 	l.DebugContext(ctx, "writing config file", "path", confPath)
