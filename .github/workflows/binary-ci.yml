@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: macos-15
     timeout-minutes: 35
     defaults:
       run:
@@ -36,7 +36,8 @@ jobs:
         env:
           EXPECTED_COMMIT: ${{ inputs.commit }}
         run: |
-          test "$(uname -m)" = aarch64
+          test "$(uname -s)" = Darwin
+          test "$(uname -m)" = arm64
           if [[ -n "$EXPECTED_COMMIT" ]]; then
             [[ "$EXPECTED_COMMIT" =~ ^[0-9a-f]{40}$ ]]
             test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
@@ -58,26 +59,26 @@ jobs:
           cache-dependency-path: go.sum
       - name: Test the Go backend
         run: go test -race ./internal/sso/... ./internal/home ./internal/aghuser
-      - name: Build and package the Linux ARM64 binary
+      - name: Build and package the macOS ARM64 binary
         env:
-          GOOS: linux
+          GOOS: darwin
           GOARCH: arm64
           CHANNEL: development
           VERSION: v0.0.0-ci
-          OUT: dist/linux-arm64/AdGuardHome
+          OUT: dist/macos-arm64/AdGuardHome
         run: |
-          mkdir -p dist/linux-arm64
+          mkdir -p dist/macos-arm64
           sh scripts/make/go-build.sh
-          file "$OUT" | grep -E 'ELF.*ARM aarch64'
-          cp LICENSE.txt dist/linux-arm64/
-          tar -czf dist/AdGuardHome-linux-arm64.tar.gz -C dist/linux-arm64 .
+          file "$OUT" | grep -E 'Mach-O.*arm64'
+          cp LICENSE.txt dist/macos-arm64/
+          tar -czf dist/AdGuardHome-macos-arm64.tar.gz -C dist/macos-arm64 .
           cd dist
-          sha256sum AdGuardHome-linux-arm64.tar.gz > SHA256SUMS
+          shasum -a 256 AdGuardHome-macos-arm64.tar.gz > SHA256SUMS
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: adguardhome-linux-arm64-${{ github.sha }}
+          name: adguardhome-macos-arm64-${{ inputs.commit || github.sha }}
           path: |
-            dist/AdGuardHome-linux-arm64.tar.gz
+            dist/AdGuardHome-macos-arm64.tar.gz
             dist/SHA256SUMS
           retention-days: 30
           if-no-files-found: error
