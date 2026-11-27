@@ -1,0 +1,83 @@
+name: ARM64 binary CI
+run-name: ARM64 binary CI · ${{ inputs.commit || github.sha }}
+
+on:
+  push:
+    branches: [apps]
+  pull_request:
+    branches: [apps]
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Full commit SHA to build (defaults to the selected branch)
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: binary-ci-${{ github.event.pull_request.head.sha || inputs.commit || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify the requested commit and ARM64 host
+        env:
+          EXPECTED_COMMIT: ${{ inputs.commit }}
+        run: |
+          test "$(uname -m)" = aarch64
+          if [[ -n "$EXPECTED_COMMIT" ]]; then
+            [[ "$EXPECTED_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+            test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          fi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: client_v2/package-lock.json
+      - name: Check and build the frontend
+        working-directory: client_v2
+        run: |
+          npm ci
+          npm run check
+          npm run build-prod
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Test the Go backend
+        run: go test -race ./internal/sso/... ./internal/home ./internal/aghuser
+      - name: Build and package the Linux ARM64 binary
+        env:
+          GOOS: linux
+          GOARCH: arm64
+          CHANNEL: development
+          VERSION: v0.0.0-ci
+          OUT: dist/linux-arm64/AdGuardHome
+        run: |
+          mkdir -p dist/linux-arm64
+          sh scripts/make/go-build.sh
+          file "$OUT" | grep -E 'ELF.*ARM aarch64'
+          cp LICENSE.txt dist/linux-arm64/
+          tar -czf dist/AdGuardHome-linux-arm64.tar.gz -C dist/linux-arm64 .
+          cd dist
+          sha256sum AdGuardHome-linux-arm64.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: adguardhome-linux-arm64-${{ github.sha }}
+          path: |
+            dist/AdGuardHome-linux-arm64.tar.gz
+            dist/SHA256SUMS
+          retention-days: 30
+          if-no-files-found: error
