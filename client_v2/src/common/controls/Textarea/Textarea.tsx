@@ -15,12 +15,14 @@ type TextareaChangeEvent = Event & {
     target: HTMLTextAreaElement;
 };
 
+export const TEXTAREA_SIZES = ['medium', 'large', 'compact'] as const;
+
 type Props = Omit<
     JSX.TextareaHTMLAttributes<HTMLTextAreaElement>,
     'onChange' | 'onBlur' | 'onInput' | 'onScroll'
 > & {
     label?: JSX.Element;
-    size?: 'small' | 'medium' | 'large' | 'compact';
+    size?: (typeof TEXTAREA_SIZES)[number];
     errorMessage?: string;
     onCard?: boolean;
     highlightComments?: boolean;
@@ -36,6 +38,8 @@ type Props = Omit<
     isClearable?: boolean;
     /** Called after the field has been emptied via the clear button. */
     onClear?: () => void;
+    /** Lets the operator drag the field taller. */
+    resizable?: boolean;
     'data-testid'?: string;
 };
 
@@ -127,6 +131,7 @@ export const Textarea = (props: Props) => {
                                 { [s.error]: !!props.errorMessage },
                                 { [s.clearable]: showClearButton() },
                                 { [s.onCard]: props.onCard },
+                                { [s.resizable]: props.resizable },
                                 props.class,
                             )}
                             id={props.id}
@@ -156,6 +161,7 @@ export const Textarea = (props: Props) => {
                                 [s.error]: !!props.errorMessage,
                                 [s.onCard]: props.onCard,
                                 [s.bounded]: isBoundedBySize(),
+                                [s.resizable]: props.resizable,
                             },
                         )}
                         style={scrollAreaStyle()}
