@@ -3,9 +3,9 @@ run-name: ARM64 binary CI · ${{ inputs.commit || github.sha }}
 
 on:
   push:
-    branches: [apps]
+    branches: [main]
   pull_request:
-    branches: [apps]
+    branches: [main]
   workflow_dispatch:
     inputs:
       commit:
